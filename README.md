@@ -70,9 +70,10 @@ uvicorn app.main:app --reload --port 8000
 
 - Cadastre produtos (SKU é único)
 - Ajuste estoque via **Movimentações** (Entrada/Saída)
-- Acompanhe **Estoque baixo** na listagem:
+  - Saídas que deixariam o estoque negativo são bloqueadas
+- Acompanhe **Estoque baixo**:
   - Regra: `quantidade atual <= estoque mínimo`
-  - Na UI: badge "Estoque baixo" e checkbox "Mostrar apenas estoque baixo"
+  - Na UI: badge "Estoque baixo", filtro "Mostrar apenas estoque baixo" e a seção "Estoque baixo" dedicada
 
 ## QA / Testes
 

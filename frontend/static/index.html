@@ -75,6 +75,27 @@
         background: #f3f3f3;
         font-size: 0.85rem;
       }
+      .badge {
+        display: inline-block;
+        padding: 0.1rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        border: 1px solid #ddd;
+      }
+      .badge-ok {
+        background: #f2fff2;
+        color: #0a5f0a;
+        border-color: #cfe9cf;
+      }
+      .badge-low {
+        background: #ffecec;
+        color: #8a0000;
+        border-color: #f0bcbc;
+        font-weight: 700;
+      }
+      tr.low-stock td {
+        background: #fff8f8;
+      }
     </style>
   </head>
   <body>
@@ -191,6 +212,23 @@
           </tr>
         </thead>
         <tbody id="products"></tbody>
+      </table>
+
+      <h2 style="margin-top: 2rem">Estoque baixo</h2>
+      <p class="muted">Regra: estoque baixo quando <code>quantidade atual ≤ estoque mínimo</code>.</p>
+      <button id="lowStockRefresh">Atualizar estoque baixo</button>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>SKU</th>
+            <th>Qtd.</th>
+            <th>Est. mín.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="lowStockTbody"></tbody>
       </table>
 
       <h2 style="margin-top: 2rem">Movimentações</h2>
