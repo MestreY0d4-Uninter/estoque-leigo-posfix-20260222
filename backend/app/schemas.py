@@ -57,5 +57,21 @@ class ProductOut(BaseModel):
     created_at: datetime
 
 
+class MovementCreate(BaseModel):
+    type: Literal["entry", "exit"]
+    occurred_at: datetime | None = None
+    quantity: int = Field(ge=1)
+    note: str = Field(default="", max_length=500)
+
+
+class MovementOut(BaseModel):
+    id: int
+    product_id: int
+    type: Literal["entry", "exit"]
+    occurred_at: datetime
+    quantity: int
+    note: str
+
+
 OrderBy = Literal["name", "quantity"]
 OrderDir = Literal["asc", "desc"]

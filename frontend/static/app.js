@@ -1,4 +1,5 @@
 let editingId = null;
+let lastProducts = [];
 
 function setError(id, msg) {
   document.getElementById(id).textContent = msg || '';
@@ -93,6 +94,8 @@ async function loadProducts() {
       throw new Error(msg);
     }
     const products = await r.json();
+    lastProducts = products;
+    refreshMovementProductSelect();
 
     for (const p of products) {
       const tr = document.createElement('tr');
@@ -170,6 +173,124 @@ async function saveProduct() {
 
   clearForm();
   await loadProducts();
+  await loadMovements();
+}
+
+function refreshMovementProductSelect() {
+  const sel = document.getElementById('movementProduct');
+  if (!sel) return;
+
+  const current = sel.value;
+  sel.innerHTML = '';
+
+  for (const p of lastProducts) {
+    const opt = document.createElement('option');
+    opt.value = String(p.id);
+    opt.textContent = `${p.name} (${p.sku}) — qtd ${p.quantity}`;
+    sel.appendChild(opt);
+  }
+
+  if (current && [...sel.options].some((o) => o.value === current)) {
+    sel.value = current;
+  }
+}
+
+function toInputDatetimeValue(d) {
+  // datetime-local expects YYYY-MM-DDTHH:mm
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
+function getMovementPayload() {
+  const type = document.getElementById('movementType').value;
+  const qty = Number(document.getElementById('movementQty').value);
+  const at = document.getElementById('movementAt').value;
+  const note = document.getElementById('movementNote').value.trim();
+
+  if (!Number.isFinite(qty) || qty < 1) throw new Error('Quantidade inválida');
+
+  // Build ISO string if user set datetime-local
+  const occurred_at = at ? new Date(at).toISOString() : null;
+
+  return {
+    type,
+    quantity: qty,
+    occurred_at,
+    note,
+  };
+}
+
+async function loadMovements() {
+  setError('movementError', '');
+  const sel = document.getElementById('movementProduct');
+  const tbody = document.getElementById('movementHistory');
+  if (!sel || !tbody) return;
+
+  tbody.innerHTML = '';
+  const productId = sel.value;
+  if (!productId) return;
+
+  try {
+    const r = await fetch(`/api/products/${productId}/movements`);
+    if (!r.ok) throw new Error(await r.text());
+    const movements = await r.json();
+
+    for (const m of movements) {
+      const tr = document.createElement('tr');
+      const when = new Date(m.occurred_at).toLocaleString();
+      tr.innerHTML = `
+        <td>${escapeHtml(when)}</td>
+        <td>${m.type === 'entry' ? 'Entrada' : 'Saída'}</td>
+        <td>${m.quantity}</td>
+        <td>${escapeHtml(m.note || '')}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  } catch (e) {
+    setError('movementError', String(e));
+  }
+}
+
+async function saveMovement() {
+  setError('movementError', '');
+  const sel = document.getElementById('movementProduct');
+  if (!sel || !sel.value) {
+    setError('movementError', 'Selecione um produto');
+    return;
+  }
+
+  let payload;
+  try {
+    payload = getMovementPayload();
+  } catch (e) {
+    setError('movementError', String(e.message || e));
+    return;
+  }
+
+  const r = await fetch(`/api/products/${sel.value}/movements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!r.ok) {
+    let msg = '';
+    try {
+      const data = await r.json();
+      msg = data.detail ? JSON.stringify(data.detail) : JSON.stringify(data);
+    } catch {
+      msg = await r.text();
+    }
+    setError('movementError', msg || 'Erro ao registrar');
+    return;
+  }
+
+  // refresh quantities + history
+  await loadProducts();
+  await loadMovements();
 }
 
 function escapeHtml(s) {
@@ -185,6 +306,10 @@ document.getElementById('save').addEventListener('click', saveProduct);
 document.getElementById('cancel').addEventListener('click', clearForm);
 document.getElementById('refresh').addEventListener('click', loadProducts);
 
+document.getElementById('movementSave')?.addEventListener('click', saveMovement);
+document.getElementById('movementRefresh')?.addEventListener('click', loadMovements);
+document.getElementById('movementProduct')?.addEventListener('change', loadMovements);
+
 for (const id of ['search', 'filterCategory', 'filterSupplier', 'orderBy', 'orderDir']) {
   document.getElementById(id).addEventListener('change', loadProducts);
 }
@@ -199,5 +324,9 @@ function debounce(fn, delay) {
 }
 
 loadHealth();
-loadProducts();
+loadProducts().then(() => {
+  const at = document.getElementById('movementAt');
+  if (at && !at.value) at.value = toInputDatetimeValue(new Date());
+  loadMovements();
+});
 clearForm();
