@@ -184,6 +184,41 @@
         <tbody id="products"></tbody>
       </table>
 
+      <h2>CSV</h2>
+      <p class="muted">
+        Exportar/importar produtos via CSV. Cabeçalhos esperados:
+        <code>sku,name,category,supplier,quantity,cost,price,min_stock</code>
+      </p>
+
+      <div class="grid">
+        <div class="col-4">
+          <a href="/api/products.csv"><button type="button">Exportar produtos (CSV)</button></a>
+        </div>
+        <div class="col-8"></div>
+
+        <div class="col-6">
+          <label>Arquivo CSV</label>
+          <input id="csvFile" type="file" accept=".csv,text/csv" />
+        </div>
+        <div class="col-3">
+          <label>Modo (por SKU)</label>
+          <select id="importMode">
+            <option value="upsert">Criar/Atualizar (upsert)</option>
+            <option value="create">Somente criar</option>
+            <option value="update">Somente atualizar</option>
+          </select>
+        </div>
+        <div class="col-3" style="display:flex; align-items:end; gap:0.5rem">
+          <button id="csvPreview" type="button">Preview</button>
+          <button id="csvApply" type="button">Aplicar</button>
+        </div>
+        <div class="col-12">
+          <div id="csvError" class="error"></div>
+          <pre id="csvSummary" class="muted"></pre>
+          <pre id="csvPreviewOut" style="white-space: pre-wrap"></pre>
+        </div>
+      </div>
+
       <p style="margin-top: 2rem" class="muted">
         Dica: suba com <code>docker compose up --build</code> e reinicie para ver que os produtos persistem.
       </p>

@@ -66,6 +66,38 @@ export SQLITE_PATH=./data/app.db
 uvicorn app.main:app --reload --port 8000
 ```
 
+## CSV (import/export de produtos)
+
+- Exportar: acesse `GET /api/products.csv` (download)
+- Importar (preview e aplicar): `POST /api/products/import` (multipart `file`)
+
+### Cabeçalhos esperados
+
+```text
+sku,name,category,supplier,quantity,cost,price,min_stock
+```
+
+Exemplo: `examples/products.example.csv`
+
+### Import (API)
+
+- Preview:
+
+```bash
+curl -F "file=@examples/products.example.csv" "http://localhost:8000/api/products/import?apply=false&mode=upsert"
+```
+
+- Aplicar:
+
+```bash
+curl -F "file=@examples/products.example.csv" "http://localhost:8000/api/products/import?apply=true&mode=upsert"
+```
+
+Modes (por SKU):
+- `upsert` (default): cria se não existir, atualiza se existir
+- `create`: somente cria (SKU existente vira inválido)
+- `update`: somente atualiza (SKU inexistente vira inválido)
+
 ## QA / Testes
 
 ```bash

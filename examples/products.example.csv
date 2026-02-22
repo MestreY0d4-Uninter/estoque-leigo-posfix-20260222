@@ -1,0 +1,4 @@
+sku,name,category,supplier,quantity,cost,price,min_stock
+SKU-001,Arroz,Alimentos,Fornecedor A,10,5.50,7.00,2
+SKU-002,Feijao,Alimentos,Fornecedor B,3,6.00,8.50,1
+SKU-003,Sabonete,Higiene,Fornecedor C,25,1.20,2.50,5
