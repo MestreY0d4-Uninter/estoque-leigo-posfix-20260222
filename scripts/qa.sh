@@ -12,4 +12,4 @@ uv pip install -q -e "./backend[dev]"
 uv run ruff format --check backend
 uv run ruff check backend
 uv run mypy backend/app
-uv run pytest -q
+uv run pytest -q --cov=app --cov-report=term-missing
