@@ -57,5 +57,23 @@ class ProductOut(BaseModel):
     created_at: datetime
 
 
+class CSVRowError(BaseModel):
+    field: str
+    message: str
+
+
+class ProductImportPreviewRow(BaseModel):
+    line: int
+    sku: str | None = None
+    action: Literal["create", "update", "skip", "invalid"]
+    errors: list[CSVRowError] = Field(default_factory=list)
+
+
+class ProductImportPreview(BaseModel):
+    headers: list[str]
+    rows: list[ProductImportPreviewRow]
+    summary: dict[str, int]
+
+
 OrderBy = Literal["name", "quantity"]
 OrderDir = Literal["asc", "desc"]

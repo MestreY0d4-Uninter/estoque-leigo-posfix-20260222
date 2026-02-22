@@ -198,6 +198,66 @@ function debounce(fn, delay) {
   };
 }
 
+async function csvPreviewOrApply(apply) {
+  setError('csvError', '');
+  document.getElementById('csvSummary').textContent = '';
+  document.getElementById('csvPreviewOut').textContent = '';
+
+  const fileInput = document.getElementById('csvFile');
+  const mode = document.getElementById('importMode').value;
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    setError('csvError', 'Selecione um arquivo CSV.');
+    return;
+  }
+
+  const form = new FormData();
+  form.append('file', file);
+
+  const params = new URLSearchParams();
+  params.set('apply', apply ? 'true' : 'false');
+  params.set('mode', mode);
+
+  try {
+    const r = await fetch(`/api/products/import?${params.toString()}`, {
+      method: 'POST',
+      body: form,
+    });
+
+    if (!r.ok) {
+      let msg = '';
+      try {
+        const data = await r.json();
+        msg = data.detail ? JSON.stringify(data.detail, null, 2) : JSON.stringify(data, null, 2);
+      } catch {
+        msg = await r.text();
+      }
+      throw new Error(msg || 'Erro no import');
+    }
+
+    const data = await r.json();
+    document.getElementById('csvSummary').textContent = `Resumo: ${JSON.stringify(data.summary)}`;
+
+    const lines = [];
+    for (const row of data.rows) {
+      if (row.action === 'invalid') {
+        const errs = (row.errors || []).map((e) => `${e.field}: ${e.message}`).join('; ');
+        lines.push(`Linha ${row.line} [INVALID] SKU=${row.sku || ''} -> ${errs}`);
+      } else {
+        lines.push(`Linha ${row.line} [${row.action.toUpperCase()}] SKU=${row.sku || ''}`);
+      }
+    }
+    document.getElementById('csvPreviewOut').textContent = lines.join('\n');
+
+    await loadProducts();
+  } catch (e) {
+    setError('csvError', String(e));
+  }
+}
+
+document.getElementById('csvPreview').addEventListener('click', () => csvPreviewOrApply(false));
+document.getElementById('csvApply').addEventListener('click', () => csvPreviewOrApply(true));
+
 loadHealth();
 loadProducts();
 clearForm();
