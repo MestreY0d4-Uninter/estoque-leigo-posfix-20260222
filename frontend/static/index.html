@@ -5,32 +5,187 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Estoque Leigo (V1)</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
-      .box { max-width: 720px; }
-      input { padding: 0.5rem; width: 100%; }
-      button { padding: 0.6rem 1rem; margin-top: 0.5rem; }
-      ul { padding-left: 1.2rem; }
-      code { background: #f3f3f3; padding: 0.1rem 0.25rem; border-radius: 4px; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 1.5rem;
+      }
+      .box {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      input,
+      select {
+        padding: 0.5rem;
+        width: 100%;
+      }
+      button {
+        padding: 0.6rem 1rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 0.75rem;
+      }
+      .col-6 {
+        grid-column: span 6;
+      }
+      .col-4 {
+        grid-column: span 4;
+      }
+      .col-3 {
+        grid-column: span 3;
+      }
+      .col-2 {
+        grid-column: span 2;
+      }
+      .col-12 {
+        grid-column: span 12;
+      }
+      @media (max-width: 720px) {
+        .col-6,
+        .col-4,
+        .col-3,
+        .col-2 {
+          grid-column: span 12;
+        }
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #e6e6e6;
+        padding: 0.5rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .muted {
+        color: #666;
+      }
+      .error {
+        color: #b00020;
+        margin-top: 0.5rem;
+      }
+      .pill {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border-radius: 999px;
+        background: #f3f3f3;
+        font-size: 0.85rem;
+      }
     </style>
   </head>
   <body>
     <div class="box">
       <h1>Estoque Leigo (V1)</h1>
-      <p>
-        Página inicial mínima para validar que o backend está no ar. Endpoint de saúde:
-        <code>/health</code>.
-      </p>
+      <p class="muted">Validação do V1: app no ar + CRUD de produtos + persistência em SQLite.</p>
 
       <h2>Health</h2>
       <pre id="health">carregando...</pre>
 
-      <h2>Notas (persistência SQLite)</h2>
-      <input id="note" placeholder="Digite uma nota e clique em salvar" />
-      <button id="save">Salvar</button>
-      <ul id="notes"></ul>
+      <h2>Produtos</h2>
 
-      <p style="margin-top: 2rem; color: #666;">
-        Dica: suba com <code>docker compose up --build</code> e reinicie para ver que as notas persistem.
+      <div class="grid">
+        <div class="col-6">
+          <label>Nome</label>
+          <input id="name" placeholder="Ex.: Arroz" />
+        </div>
+        <div class="col-6">
+          <label>SKU (único)</label>
+          <input id="sku" placeholder="Ex.: SKU-001" />
+        </div>
+
+        <div class="col-4">
+          <label>Categoria</label>
+          <input id="category" placeholder="Ex.: Alimentos" />
+        </div>
+        <div class="col-4">
+          <label>Fornecedor</label>
+          <input id="supplier" placeholder="Ex.: Fornecedor A" />
+        </div>
+        <div class="col-2">
+          <label>Qtd.</label>
+          <input id="quantity" type="number" min="0" step="1" value="0" />
+        </div>
+        <div class="col-2">
+          <label>Estoque mín.</label>
+          <input id="min_stock" type="number" min="0" step="1" value="0" />
+        </div>
+
+        <div class="col-3">
+          <label>Custo</label>
+          <input id="cost" type="number" min="0" step="0.01" value="0" />
+        </div>
+        <div class="col-3">
+          <label>Preço</label>
+          <input id="price" type="number" min="0" step="0.01" value="0" />
+        </div>
+
+        <div class="col-12">
+          <button id="save">Salvar</button>
+          <button id="cancel" style="margin-left: 0.5rem">Cancelar edição</button>
+          <span id="editing" class="pill" style="margin-left: 0.5rem; display: none">editando</span>
+          <div id="formError" class="error"></div>
+        </div>
+      </div>
+
+      <h3>Busca e filtros</h3>
+      <div class="grid">
+        <div class="col-6">
+          <label>Busca (nome/SKU)</label>
+          <input id="search" placeholder="Digite para buscar..." />
+        </div>
+        <div class="col-3">
+          <label>Filtrar categoria</label>
+          <input id="filterCategory" placeholder="Ex.: Alimentos" />
+        </div>
+        <div class="col-3">
+          <label>Filtrar fornecedor</label>
+          <input id="filterSupplier" placeholder="Ex.: Fornecedor A" />
+        </div>
+
+        <div class="col-3">
+          <label>Ordenar por</label>
+          <select id="orderBy">
+            <option value="name">Nome</option>
+            <option value="quantity">Quantidade</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>Direção</label>
+          <select id="orderDir">
+            <option value="asc">Asc</option>
+            <option value="desc">Desc</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <button id="refresh">Atualizar lista</button>
+          <div id="listError" class="error"></div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>SKU</th>
+            <th>Categoria</th>
+            <th>Fornecedor</th>
+            <th>Qtd.</th>
+            <th>Est. mín.</th>
+            <th>Custo</th>
+            <th>Preço</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="products"></tbody>
+      </table>
+
+      <p style="margin-top: 2rem" class="muted">
+        Dica: suba com <code>docker compose up --build</code> e reinicie para ver que os produtos persistem.
       </p>
     </div>
 

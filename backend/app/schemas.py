@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,3 +20,42 @@ class NoteOut(BaseModel):
     id: int
     content: str
     created_at: datetime
+
+
+class ProductCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    sku: str = Field(min_length=1, max_length=64)
+    category: str = Field(default="", max_length=100)
+    supplier: str = Field(default="", max_length=100)
+    quantity: int = Field(default=0, ge=0)
+    min_stock: int = Field(default=0, ge=0)
+    cost: Decimal = Field(default=Decimal("0"), ge=0)
+    price: Decimal = Field(default=Decimal("0"), ge=0)
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    sku: str | None = Field(default=None, min_length=1, max_length=64)
+    category: str | None = Field(default=None, max_length=100)
+    supplier: str | None = Field(default=None, max_length=100)
+    quantity: int | None = Field(default=None, ge=0)
+    min_stock: int | None = Field(default=None, ge=0)
+    cost: Decimal | None = Field(default=None, ge=0)
+    price: Decimal | None = Field(default=None, ge=0)
+
+
+class ProductOut(BaseModel):
+    id: int
+    name: str
+    sku: str
+    category: str
+    supplier: str
+    quantity: int
+    min_stock: int
+    cost: Decimal
+    price: Decimal
+    created_at: datetime
+
+
+OrderBy = Literal["name", "quantity"]
+OrderDir = Literal["asc", "desc"]
