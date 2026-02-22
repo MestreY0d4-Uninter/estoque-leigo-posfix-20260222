@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
@@ -10,9 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import Settings, get_db_session, get_settings, make_engine, make_sessionmaker
-from app.models import Base, Note, Product
+from app.models import Base, Movement, Note, Product
 from app.schemas import (
     HealthResponse,
+    MovementCreate,
+    MovementOut,
     NoteCreate,
     NoteOut,
     OrderBy,
@@ -80,6 +83,16 @@ def create_app() -> FastAPI:
             cost=p.cost,
             price=p.price,
             created_at=p.created_at,
+        )
+
+    def _to_movement_out(m: Movement) -> MovementOut:
+        return MovementOut(
+            id=m.id,
+            product_id=m.product_id,
+            type=m.type,  # type: ignore[arg-type]
+            occurred_at=m.occurred_at,
+            quantity=m.quantity,
+            note=m.note,
         )
 
     @app.post("/api/products", response_model=ProductOut)
@@ -171,6 +184,61 @@ def create_app() -> FastAPI:
         db.delete(p)
         db.commit()
         return Response(status_code=204)
+
+    @app.post("/api/products/{product_id}/movements", response_model=MovementOut)
+    def create_movement(
+        product_id: int,
+        payload: MovementCreate,
+        db: Session = Depends(db_session),  # noqa: B008
+    ) -> MovementOut:
+        p = db.get(Product, product_id)
+        if p is None:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+        occurred_at = payload.occurred_at or datetime.utcnow()
+
+        if payload.type == "entry":
+            p.quantity += payload.quantity
+        else:
+            if p.quantity - payload.quantity < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Saída bloqueada: estoque não pode ficar negativo",
+                )
+            p.quantity -= payload.quantity
+
+        m = Movement(
+            product_id=product_id,
+            type=payload.type,
+            occurred_at=occurred_at,
+            quantity=payload.quantity,
+            note=payload.note,
+        )
+        db.add(m)
+        db.add(p)
+        db.commit()
+        db.refresh(m)
+        return _to_movement_out(m)
+
+    @app.get("/api/products/{product_id}/movements", response_model=list[MovementOut])
+    def list_movements(
+        product_id: int,
+        db: Session = Depends(db_session),  # noqa: B008
+    ) -> list[MovementOut]:
+        p = db.get(Product, product_id)
+        if p is None:
+            raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+        rows = (
+            db.execute(
+                select(Movement)
+                .where(Movement.product_id == product_id)
+                .order_by(Movement.occurred_at.desc(), Movement.id.desc())
+            )
+            .scalars()
+            .all()
+        )
+        return [_to_movement_out(m) for m in rows]
 
     # Frontend (static)
     base_dir = Path(__file__).resolve().parents[1]

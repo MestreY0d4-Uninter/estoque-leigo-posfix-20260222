@@ -184,8 +184,61 @@
         <tbody id="products"></tbody>
       </table>
 
+      <h2 style="margin-top: 2rem">Movimentações</h2>
+      <p class="muted">
+        Registre entradas/saídas e veja o histórico por produto. Saídas que deixariam o estoque negativo são
+        bloqueadas.
+      </p>
+
+      <div class="grid">
+        <div class="col-6">
+          <label>Produto</label>
+          <select id="movementProduct"></select>
+        </div>
+        <div class="col-3">
+          <label>Tipo</label>
+          <select id="movementType">
+            <option value="entry">Entrada</option>
+            <option value="exit">Saída</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>Quantidade</label>
+          <input id="movementQty" type="number" min="1" step="1" value="1" />
+        </div>
+
+        <div class="col-6">
+          <label>Data/hora</label>
+          <input id="movementAt" type="datetime-local" />
+        </div>
+        <div class="col-6">
+          <label>Observação (opcional)</label>
+          <input id="movementNote" placeholder="Ex.: compra do fornecedor" />
+        </div>
+
+        <div class="col-12">
+          <button id="movementSave">Registrar movimentação</button>
+          <button id="movementRefresh" style="margin-left: 0.5rem">Atualizar histórico</button>
+          <div id="movementError" class="error"></div>
+        </div>
+      </div>
+
+      <h3>Histórico</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Data/hora</th>
+            <th>Tipo</th>
+            <th>Qtd.</th>
+            <th>Obs.</th>
+          </tr>
+        </thead>
+        <tbody id="movementHistory"></tbody>
+      </table>
+
       <p style="margin-top: 2rem" class="muted">
-        Dica: suba com <code>docker compose up --build</code> e reinicie para ver que os produtos persistem.
+        Dica: suba com <code>docker compose up --build</code> e reinicie para ver que os produtos e as
+        movimentações persistem.
       </p>
     </div>
 
