@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env
+.env
+
+# SQLite / data
+data/
+*.db
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
