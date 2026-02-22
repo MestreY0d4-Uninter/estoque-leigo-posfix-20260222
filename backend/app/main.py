@@ -220,7 +220,14 @@ def create_app() -> FastAPI:
 
     def _parse_csv_upload(file: UploadFile) -> tuple[list[str], list[dict[str, str]]]:
         raw = file.file.read()
-        text_data = raw.decode("utf-8-sig")
+        try:
+            text_data = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="CSV precisa estar em UTF-8 (tente exportar como UTF-8)",
+            ) from exc
+
         reader = csv.DictReader(io.StringIO(text_data))
         headers = list(reader.fieldnames or [])
         data_rows: list[dict[str, str]] = []
@@ -236,7 +243,7 @@ def create_app() -> FastAPI:
     def import_products_csv(
         file: UploadFile = File(...),  # noqa: B008
         apply: bool = Query(default=False),  # noqa: B008
-        mode: str = Query(default="upsert"),  # noqa: B008
+        mode: Literal["upsert", "create", "update"] = Query(default="upsert"),  # noqa: B008
         db: Session = Depends(db_session),  # noqa: B008
     ) -> ProductImportPreview:
         if not file.filename or not file.filename.lower().endswith(".csv"):
