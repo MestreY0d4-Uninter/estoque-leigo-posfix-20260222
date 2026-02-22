@@ -14,11 +14,16 @@ Base do sistema de estoque para rodar **localmente** (web) com persistência em 
 
 ## Rodar com Docker (recomendado)
 
-1. (Opcional) Copie o `.env.example` para `.env` e ajuste se quiser:
+1. Copie o `.env.example` para `.env` e **configure o login**:
 
 ```bash
 cp .env.example .env
+
+# Gere um hash para a senha e coloque em ADMIN_PASSWORD_HASH
+python -c "from passlib.context import CryptContext; ctx=CryptContext(schemes=['pbkdf2_sha256']); print(ctx.hash('sua-senha-aqui'))"
 ```
+
+> Importante: `SESSION_SECRET` é obrigatório.
 
 2. Suba tudo:
 
@@ -30,11 +35,14 @@ docker compose up --build
 
 - http://localhost:8000
 
+Você será redirecionado para `/login` se não estiver autenticado.
+
 Endpoints úteis:
 
-- `GET /health`
-- `GET /api/notes`
-- `POST /api/notes` com body `{"content":"..."}`
+- `GET /health` (público)
+- `GET /api/products` (protegido)
+- `POST /api/login` (público)
+- `POST /api/logout` (protegido)
 
 ## Persistência do SQLite
 

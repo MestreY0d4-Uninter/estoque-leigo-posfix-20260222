@@ -64,6 +64,14 @@ async function loadHealth() {
   }
 }
 
+function ensureAuthed(r) {
+  if (r.status === 401) {
+    window.location.href = '/login';
+    return false;
+  }
+  return true;
+}
+
 function currentQuery() {
   const search = document.getElementById('search').value.trim();
   const category = document.getElementById('filterCategory').value.trim();
@@ -89,6 +97,7 @@ async function loadProducts() {
   try {
     const params = currentQuery();
     const r = await fetch(`/api/products?${params.toString()}`);
+    if (!ensureAuthed(r)) return;
     if (!r.ok) {
       const msg = await r.text();
       throw new Error(msg);
@@ -125,6 +134,7 @@ async function loadProducts() {
       tr.querySelector('[data-action="delete"]').addEventListener('click', async () => {
         if (!confirm(`Excluir produto ${p.name}?`)) return;
         const del = await fetch(`/api/products/${p.id}`, { method: 'DELETE' });
+        if (!ensureAuthed(del)) return;
         if (!del.ok && del.status !== 204) {
           setError('listError', await del.text());
           return;
@@ -159,6 +169,7 @@ async function saveProduct() {
     body: JSON.stringify(payload),
   });
 
+  if (!ensureAuthed(r)) return;
   if (!r.ok) {
     let msg = '';
     try {
