@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Estoque Leigo (V1)</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Estoque Leigo (V1)</h1>
+
+      <section class="card">
+        <h2>Status</h2>
+        <ul>
+          <li><strong>Health:</strong> <a href="/health" target="_blank" rel="noreferrer">/health</a></li>
+          <li><strong>SQLite:</strong> {{ sqlite_path }}</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Novo item</h2>
+        <form method="post" action="/items" class="row">
+          <input name="name" placeholder="Ex: Arroz" minlength="1" maxlength="200" required />
+          <button type="submit">Adicionar</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Últimos itens</h2>
+        {% if items %}
+          <ol>
+            {% for item in items %}
+              <li>#{{ item.id }} — {{ item.name }}</li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p>Nenhum item ainda. Adicione o primeiro acima.</p>
+        {% endif %}
+      </section>
+
+      <footer class="footer">
+        <small>Rodando local. Porta {{ port }}.</small>
+      </footer>
+    </main>
+  </body>
+</html>
