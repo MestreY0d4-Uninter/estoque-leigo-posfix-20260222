@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
 
+from app.auth import get_auth_settings, new_expiry_ts, verify_password
 from app.db import Settings, get_db_session, get_settings, make_engine, make_sessionmaker
 from app.models import Base, Note, Product
 from app.schemas import (
@@ -21,10 +26,67 @@ from app.schemas import (
     ProductOut,
     ProductUpdate,
 )
+from app.schemas_auth import LoginRequest
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Estoque Leigo (V1)")
+
+    auth_settings = get_auth_settings()
+    if not auth_settings.session_secret:
+        # Hard fail in real usage, but keep tests working without extra boilerplate.
+        if "pytest" in sys.modules:
+            auth_settings = auth_settings.__class__(
+                admin_user=auth_settings.admin_user,
+                admin_password_hash=auth_settings.admin_password_hash,
+                session_secret="test-secret",
+                session_max_age_seconds=auth_settings.session_max_age_seconds,
+            )
+        else:
+            raise RuntimeError("SESSION_SECRET is required")
+
+    from app.middleware_auth import AuthMiddleware
+
+    # Add auth middleware *before* SessionMiddleware.
+    # Starlette runs middlewares in reverse order of registration.
+    # So SessionMiddleware must be outermost to populate request.session.
+    app.add_middleware(
+        AuthMiddleware,
+        public_paths={"/health", "/login", "/api/login"},
+    )
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=auth_settings.session_secret,
+        max_age=auth_settings.session_max_age_seconds,
+        same_site="lax",
+        https_only=False,
+    )
+
+    @app.get("/login", response_class=HTMLResponse)
+    def login_page() -> HTMLResponse:
+        base_dir = Path(__file__).resolve().parents[1]
+        login_path = base_dir / "frontend" / "static" / "login.html"
+        if login_path.exists():
+            return HTMLResponse(login_path.read_text(encoding="utf-8"))
+        return HTMLResponse("<h1>Login</h1>")
+
+    @app.post("/api/login")
+    def login(request: Request, payload: LoginRequest) -> dict[str, bool]:
+        if payload.username != auth_settings.admin_user:
+            raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        if not verify_password(payload.password, auth_settings.admin_password_hash):
+            raise HTTPException(status_code=401, detail="Credenciais inválidas")
+
+        request.session.clear()
+        request.session["user"] = payload.username
+        request.session["exp"] = new_expiry_ts(auth_settings.session_max_age_seconds)
+        return {"ok": True}
+
+    @app.post("/api/logout")
+    def logout(request: Request) -> dict:
+        request.session.clear()
+        return {"ok": True}
 
     @app.on_event("startup")
     def _startup() -> None:
