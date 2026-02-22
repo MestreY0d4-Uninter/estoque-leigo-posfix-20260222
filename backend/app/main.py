@@ -39,6 +39,12 @@ def create_app() -> FastAPI:
         app.state.engine = engine
         app.state.session_factory = make_sessionmaker(engine)
 
+    @app.on_event("shutdown")
+    def _shutdown() -> None:
+        engine = getattr(app.state, "engine", None)
+        if engine is not None:
+            engine.dispose()
+
     def _get_settings_from_state() -> Settings:
         return app.state.settings  # type: ignore[no-any-return]
 
