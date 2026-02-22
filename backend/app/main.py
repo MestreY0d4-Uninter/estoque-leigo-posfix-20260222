@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql import and_
 
 from app.db import Settings, get_db_session, get_settings, make_engine, make_sessionmaker
 from app.models import Base, Movement, Note, Product
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
             supplier=p.supplier,
             quantity=p.quantity,
             min_stock=p.min_stock,
+            low_stock=p.quantity <= p.min_stock,
             cost=p.cost,
             price=p.price,
             created_at=p.created_at,
@@ -128,6 +130,7 @@ def create_app() -> FastAPI:
         search: str | None = Query(default=None, max_length=200),  # noqa: B008
         category: str | None = Query(default=None, max_length=100),  # noqa: B008
         supplier: str | None = Query(default=None, max_length=100),  # noqa: B008
+        low_stock: bool = Query(default=False),  # noqa: B008
         order_by: OrderBy = Query(default="name"),  # noqa: B008
         order_dir: OrderDir = Query(default="asc"),  # noqa: B008
     ) -> list[ProductOut]:
@@ -139,6 +142,8 @@ def create_app() -> FastAPI:
             stmt = stmt.where(Product.category == category)
         if supplier:
             stmt = stmt.where(Product.supplier == supplier)
+        if low_stock:
+            stmt = stmt.where(Product.quantity <= Product.min_stock)
 
         order_col = Product.name if order_by == "name" else Product.quantity
         stmt = stmt.order_by(order_col.asc() if order_dir == "asc" else order_col.desc())
@@ -155,6 +160,19 @@ def create_app() -> FastAPI:
         if p is None:
             raise HTTPException(status_code=404, detail="Produto não encontrado")
         return _to_product_out(p)
+
+    @app.get("/api/low-stock", response_model=list[ProductOut])
+    def low_stock(
+        db: Session = Depends(db_session),  # noqa: B008
+        order_by: OrderBy = Query(default="quantity"),  # noqa: B008
+        order_dir: OrderDir = Query(default="asc"),  # noqa: B008
+    ) -> list[ProductOut]:
+        # Rule: low stock when quantity <= min_stock
+        stmt = select(Product).where(and_(Product.quantity <= Product.min_stock))
+        order_col = Product.name if order_by == "name" else Product.quantity
+        stmt = stmt.order_by(order_col.asc() if order_dir == "asc" else order_col.desc())
+        rows = db.execute(stmt).scalars().all()
+        return [_to_product_out(p) for p in rows]
 
     @app.put("/api/products/{product_id}", response_model=ProductOut)
     def update_product(
