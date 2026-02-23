@@ -4,15 +4,22 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from app.auth import pwd_context
 from app.main import create_app
 
 
 def test_low_stock_endpoint_and_flag(tmp_path: Path, monkeypatch) -> None:
     db_path = tmp_path / "low.db"
     monkeypatch.setenv("SQLITE_PATH", str(db_path))
+    monkeypatch.setenv("SESSION_SECRET", "test-secret")
+    monkeypatch.setenv("ADMIN_USER", "admin")
+    monkeypatch.setenv("ADMIN_PASSWORD_HASH", pwd_context.hash("pw"))
 
     app = create_app()
     with TestClient(app) as client:
+        login = client.post("/api/login", json={"username": "admin", "password": "pw"})
+        assert login.status_code == 200
+
         # product OK
         r1 = client.post(
             "/api/products",
