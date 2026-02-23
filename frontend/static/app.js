@@ -78,7 +78,6 @@ function currentQuery() {
   const supplier = document.getElementById('filterSupplier').value.trim();
   const order_by = document.getElementById('orderBy').value;
   const order_dir = document.getElementById('orderDir').value;
-
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   if (category) params.set('category', category);
@@ -106,8 +105,18 @@ async function loadProducts() {
     lastProducts = products;
     refreshMovementProductSelect();
 
+    const onlyLow = document.getElementById('onlyLowStock')?.checked;
+
     for (const p of products) {
+      const low = Boolean(p.low_stock);
+      if (onlyLow && !low) continue;
+
       const tr = document.createElement('tr');
+      if (low) tr.classList.add('low-stock');
+
+      const badge = low
+        ? '<span class="badge badge-low">Estoque baixo</span>'
+        : '<span class="badge badge-ok">OK</span>';
 
       tr.innerHTML = `
         <td>${escapeHtml(p.name)}</td>
@@ -116,6 +125,7 @@ async function loadProducts() {
         <td>${escapeHtml(p.supplier || '')}</td>
         <td>${p.quantity}</td>
         <td>${p.min_stock}</td>
+        <td>${badge}</td>
         <td>${p.cost}</td>
         <td>${p.price}</td>
         <td>
@@ -265,6 +275,42 @@ async function loadMovements() {
   }
 }
 
+async function loadLowStock() {
+  const tbody = document.getElementById('lowStockTbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  try {
+    const r = await fetch('/api/low-stock?order_by=quantity&order_dir=asc');
+    if (!r.ok) throw new Error(await r.text());
+    const products = await r.json();
+
+    if (products.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="5" class="muted">Nenhum item com estoque baixo.</td>';
+      tbody.appendChild(tr);
+      return;
+    }
+
+    for (const p of products) {
+      const tr = document.createElement('tr');
+      tr.classList.add('low-stock');
+      tr.innerHTML = `
+        <td>${escapeHtml(p.name)}</td>
+        <td><code>${escapeHtml(p.sku)}</code></td>
+        <td>${p.quantity}</td>
+        <td>${p.min_stock}</td>
+        <td><span class="badge badge-low">Estoque baixo</span></td>
+      `;
+      tbody.appendChild(tr);
+    }
+  } catch (e) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="5" class="error">${escapeHtml(String(e))}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
 async function saveMovement() {
   setError('movementError', '');
   const sel = document.getElementById('movementProduct');
@@ -316,12 +362,15 @@ function escapeHtml(s) {
 document.getElementById('save').addEventListener('click', saveProduct);
 document.getElementById('cancel').addEventListener('click', clearForm);
 document.getElementById('refresh').addEventListener('click', loadProducts);
+document.getElementById('onlyLowStock')?.addEventListener('change', loadProducts);
+
+document.getElementById('lowStockRefresh')?.addEventListener('click', loadLowStock);
 
 document.getElementById('movementSave')?.addEventListener('click', saveMovement);
 document.getElementById('movementRefresh')?.addEventListener('click', loadMovements);
 document.getElementById('movementProduct')?.addEventListener('change', loadMovements);
 
-for (const id of ['search', 'filterCategory', 'filterSupplier', 'orderBy', 'orderDir']) {
+for (const id of ['search', 'filterCategory', 'filterSupplier', 'orderBy', 'orderDir', 'onlyLowStock']) {
   document.getElementById(id).addEventListener('change', loadProducts);
 }
 document.getElementById('search').addEventListener('input', debounce(loadProducts, 250));

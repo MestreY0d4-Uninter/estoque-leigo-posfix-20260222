@@ -74,6 +74,15 @@ export SQLITE_PATH=./data/app.db
 uvicorn app.main:app --reload --port 8000
 ```
 
+## Fluxo do V1 (resumo)
+
+- Cadastre produtos (SKU é único)
+- Ajuste estoque via **Movimentações** (Entrada/Saída)
+  - Saídas que deixariam o estoque negativo são bloqueadas
+- Acompanhe **Estoque baixo**:
+  - Regra: `quantidade atual <= estoque mínimo`
+  - Na UI: badge "Estoque baixo", filtro "Mostrar apenas estoque baixo" e a seção "Estoque baixo" dedicada
+
 ## QA / Testes
 
 ```bash

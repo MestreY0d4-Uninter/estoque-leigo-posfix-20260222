@@ -52,6 +52,7 @@ class ProductOut(BaseModel):
     supplier: str
     quantity: int
     min_stock: int
+    low_stock: bool
     cost: Decimal
     price: Decimal
     created_at: datetime
